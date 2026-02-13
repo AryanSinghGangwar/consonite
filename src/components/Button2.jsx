@@ -11,7 +11,7 @@ const Button2 = () => {
 
   return (
     <StyledWrapper onClick={scrollToFooter}>
-      BOOK NOW :)
+      Register Now :)
     </StyledWrapper>
   );
 };

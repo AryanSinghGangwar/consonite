@@ -1,159 +1,117 @@
-import React from 'react';
+import React, { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/all";
-import { TiLocationArrow } from "react-icons/ti";
-import { useRef, useState } from "react";
 import poster from "../assets/56.jpg";
-import Button from "./Button";
 import he from "../assets/hero-2.mp4";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const Hero = () => {
-  const scrollToFooter = () => {
-    const footerSection = document.getElementById("Register");
-    if (footerSection) {
-      footerSection.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
-  const [currentIndex, setCurrentIndex] = useState(1);
-  const [hasClicked, setHasClicked] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const videoRef = useRef(null);
 
-  const nextVdRef = useRef(null);
-  const mainVideoRef = useRef(null);
+  const handleCanPlay = () => setVideoReady(true);
 
-  const handleCanPlay = () => {
-    setVideoReady(true);
-  };
-
-  useGSAP(
-    () => {
-      if (hasClicked) {
-        gsap.set("#next-video", { visibility: "visible" });
-        gsap.to("#next-video", {
-          transformOrigin: "center center",
-          scale: 1,
-          width: "100%",
-          height: "100%",
-          duration: 1,
-          ease: "power1.inOut",
-          onStart: () => nextVdRef.current?.play(),
-        });
-        gsap.from("#current-video", {
-          transformOrigin: "center center",
-          scale: 0,
-          duration: 1.5,
-          ease: "power1.inOut",
-        });
-      }
-    },
-    {
-      dependencies: [currentIndex],
-      revertOnUpdate: true,
-    }
-  );
-
+  // 🎬 cinematic animations
   useGSAP(() => {
-    gsap.set("#video-frame", {
-      clipPath: "polygon(14% 0, 72% 0, 88% 90%, 0 95%)",
-      borderRadius: "0% 0% 40% 10%",
+    // title reveal
+    gsap.from(".hero-title", {
+      y: 120,
+      opacity: 0,
+      duration: 1.4,
+      ease: "power4.out",
+      delay: 0.5,
     });
-    gsap.from("#video-frame", {
-      clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
-      borderRadius: "0% 0% 0% 0%",
-      ease: "power1.inOut",
+
+    gsap.from(".hero-sub", {
+      y: 40,
+      opacity: 0,
+      duration: 1.2,
+      delay: 1,
+      ease: "power3.out",
+    });
+
+    // 🎥 slow cinematic zoom
+    gsap.to(".bg-video", {
+      scale: 1.12,
+      duration: 20,
+      ease: "none",
+      repeat: -1,
+      yoyo: true,
+    });
+
+    // 🎬 parallax scroll
+    gsap.to(".hero-content", {
+      y: 120,
       scrollTrigger: {
-        trigger: "#video-frame",
-        start: "center center",
-        end: "bottom center",
+        trigger: "#home",
+        start: "top top",
+        end: "bottom top",
         scrub: true,
       },
     });
   });
 
   return (
-    <div id="home" className="relative h-dvh w-screen overflow-x-hidden">
-      <div
-        id="video-frame"
-        className="relative z-10 h-dvh w-screen overflow-hidden rounded-lg bg-blue-75"
-      >
-        <div>
-          <div className="mask-clip-path absolute-center absolute z-0 size-64 cursor-pointer overflow-hidden rounded-lg">
-            <div className="origin-center scale-0 opacity-0 transition-all duration-500 ease-in hover:scale-0 hover:opacity-100">
-              <video
-                src={he}
-                loop
-                muted
-                playsInline
-                poster={poster}
-                id="current-video"
-                className="size-64 origin-center scale-0 object-cover object-center"
-                onCanPlay={handleCanPlay}
-              />
-            </div>
-          </div>
+    <div id="home" className="relative h-dvh w-screen overflow-hidden bg-black">
 
-          <video
-            ref={nextVdRef}
-            src={he}
-            loop
-            muted
-            playsInline
-            poster={poster}
-            id="next-video"
-            className="absolute-center invisible absolute z-20 size-64 object-cover object-center"
-            onCanPlay={handleCanPlay}
-          />
-          
-          {/* Main background video with poster */}
-          <div className="absolute left-0 top-0 size-full">
-            <img 
-              src={poster} 
-              alt="Concert poster" 
-              className={`absolute left-0 top-0 size-full object-cover object-center transition-opacity duration-500 ${
-                videoReady ? 'opacity-0' : 'opacity-100'
-              }`}
-            />
-            <video
-              ref={mainVideoRef}
-              src={he}
-              autoPlay
-              loop
-              muted
-              playsInline
-              poster={poster}
-              className={`absolute left-0 top-0 size-full object-cover object-center transition-opacity duration-500 ${
-                videoReady ? 'opacity-100' : 'opacity-0'
-              }`}
-              onCanPlay={handleCanPlay}
-            />
-          </div>
-        </div>
+      {/* 🎥 VIDEO BACKGROUND */}
+      <div className="absolute inset-0">
+        {/* poster fallback */}
+        <img
+          src={poster}
+          alt="poster"
+          className={`absolute size-full object-cover transition-opacity duration-700 ${
+            videoReady ? "opacity-0" : "opacity-100"
+          }`}
+        />
 
-        <div className="absolute left-0 top-0 z-40 size-full">
-          <div className="mt-24 px-5 sm:px-10">
-            <h1 className="special-font hero-heading text-[#dc143c]">
-              co<b>n</b>so
-              <span className="text-white">
-                <b>n</b>ITE
-              </span>
-            </h1>
-            <p className="mb-5 max-w-64 font-robert-regular text-blue-100">
-              Get ready for an unforgettable night of live music and energy –
-              <br />
-              grab your tickets now!
-            </p>
-            <Button
-              title="Register"
-              onClick={scrollToFooter}
-              leftIcon={<TiLocationArrow />}
-              containerClass="bg-yellow-300 flex-center gap-1"
-            />
-          </div>
-        </div>
+        {/* video */}
+        <video
+          ref={videoRef}
+          src={he}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          onCanPlay={handleCanPlay}
+          className={`bg-video absolute size-full object-cover transition-opacity duration-700 ${
+            videoReady ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      </div>
+
+      {/* 🎥 DARK CINEMATIC OVERLAY */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black pointer-events-none" />
+
+      {/* 🎬 MOVING LIGHT GLOW */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute w-[600px] h-[600px] bg-fuchsia-600/20 blur-[140px] top-[-200px] left-[-200px] animate-pulse" />
+        <div className="absolute w-[500px] h-[500px] bg-cyan-500/20 blur-[140px] bottom-[-200px] right-[-150px] animate-pulse" />
+      </div>
+
+      {/* 🎭 HERO CONTENT */}
+      <div className="hero-content relative z-20 flex h-full flex-col items-center justify-center text-center px-6 pointer-events-none">
+
+        <h1 className="hero-title special-font text-[13vw] leading-none text-white select-none">
+          CO<b className="text-[#dc143c]">N</b>SO
+          <span className="text-white">
+            <b className="text-[#dc143c]">N</b>ITE
+          </span>
+        </h1>
+
+        <p className="hero-sub mt-6 text-lg sm:text-xl text-white/80 max-w-xl select-none">
+          A night of music, lights & madness.  
+          Experience the most electrifying concert of VNIT.
+        </p>
+
+      </div>
+
+      {/* 🎬 SCROLL INDICATOR */}
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-white/60 text-sm tracking-widest pointer-events-none">
+        <div className="animate-bounce">SCROLL ↓</div>
       </div>
     </div>
   );

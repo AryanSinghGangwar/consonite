@@ -15,7 +15,7 @@ const Footer = () => {
                   className="font-bold text-xl uppercase text-start"
                   href="https://consortium.ecellvnit.org/"
                 >
-                  CONSORTIUM&apos;25
+                  CONSORTIUM&apos;26
                 </a>
 
                 <p className="text-center text-base mt-4 w-1/2 lg:w-full">

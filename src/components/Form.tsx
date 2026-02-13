@@ -1,239 +1,185 @@
-import React, { useState } from "react";
-import { User, Smartphone } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { User, Smartphone, Mail } from "lucide-react";
 import AnimatedTitle from "./AnimatedTitle";
+import QRCode from "qrcode";
 
 const Register = () => {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    affiliation: "",
-    otp: "",
+
+  const [formData,setFormData] = useState({
+    name:"",
+    phone:"",
+    email:"",
+    enrollment:""
   });
-  const [otpSent, setOtpSent] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [messages, setMessages] = useState<string[]>([]);
-  const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  const handleWhatsAppRedirect = () => {
-    const phoneNumber = "7517705046"; // Replace with the actual WhatsApp number
-    const message = `Hi, I'm ${formData.name}. I've just registered!`; // Dynamic message
-    const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
-      message
-    )}`;
-    window.open(whatsappLink, "_blank");
-  };
+  const [submitted,setSubmitted] = useState(false);
+  const [loading,setLoading] = useState(false); // 🔥 loading state
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const qrX = 1655;
+  const qrY = 82;
+  const qrSize = 260;
+
+  const handleSubmit = async(e:React.FormEvent)=>{
     e.preventDefault();
     setLoading(true);
 
-    const { affiliation, ...data } = formData;
-
-    if (affiliation === "vnit") {
-      const response = await fetch(
-        "https://consonite-backend.onrender.com/register",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...data, affiliation: "vnit" }),
-        }
-      );
-      const result = await response.json();
-      setMessages([result.message]);
-      setLoading(false);
-      if (response.ok) setSubmitted(true);
-    } else if (affiliation === "non_vnit") {
-      const response = await fetch(
-        "https://consonite-backend.onrender.com/register",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...data, affiliation: "non_vnit" }),
-        }
-      );
-      const result = await response.json();
-      setMessages([result.message]);
-      setLoading(false);
-      if (response.ok) {
-        setGeneratedOtp(result.otp);
-        setOtpSent(true);
-      }
+    // send to mongo
+    try{
+      await fetch("https://consonitebackend.onrender.com/register",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(formData)
+      });
+    }catch(err){
+      console.log("DB optional");
     }
-  };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    // if (formData.otp !== generatedOtp) {
-    //   setMessages(["Invalid OTP. Please try again."]);
-    //   setLoading(false);
-    //   return;
-    // }
-
-    setMessages([
-      "Thank you for registering! For further details send `hi` to us on Whatsapp below..",
-    ]);
     setSubmitted(true);
-    setLoading(false);
+    setTimeout(generateTicket,200);
   };
 
-  return (
-    <div
-      id="Register"
-      className="bg-black flex flex-col gap-3 items-center justify-center p-4 sm:p-6 md:p-8"
-    >
-      <div>
-        <AnimatedTitle
-          title="<b>F</b><b>o</b><b>r</b><b>m</b>"
-          containerClass="mt-5 !text-white text-center z-30 bottom-20"
+  // 🎟️ generate ticket
+  const generateTicket = async()=>{
+    const canvas = canvasRef.current;
+    if(!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if(!ctx) return;
+
+    const base = new Image();
+    base.src="/ticket.png";
+
+    base.onload = async()=>{
+      canvas.width = base.width;
+      canvas.height = base.height;
+
+      ctx.drawImage(base,0,0);
+
+      const qrText = `
+Name:${formData.name}
+Phone:${formData.phone}
+Email:${formData.email}
+Enroll:${formData.enrollment}
+`;
+
+      const qrURL = await QRCode.toDataURL(qrText,{
+        margin:1,
+        width:qrSize
+      });
+
+      const qrImg = new Image();
+      qrImg.src = qrURL;
+
+      qrImg.onload = ()=>{
+        ctx.fillStyle="white";
+        ctx.fillRect(qrX-20, qrY-20, qrSize+40, qrSize+40);
+
+        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+        autoDownload();
+        setLoading(false); // 🔥 stop loading after ready
+      };
+    };
+  };
+
+  const autoDownload = ()=>{
+    const canvas = canvasRef.current;
+    if(!canvas) return;
+
+    const link=document.createElement("a");
+    link.download="consonite-ticket.png";
+    link.href=canvas.toDataURL("image/png");
+    link.click();
+  };
+
+  return(
+  <div id="Register" className="bg-black min-h-screen flex flex-col items-center justify-center p-6">
+
+    <AnimatedTitle
+      title="<b>R</b><b>e</b><b>g</b><b>i</b><b>s</b><b>t</b><b>e</b><b>r</b>"
+      containerClass="!text-white text-center mb-10"
+    />
+
+    {!submitted && (
+      <form onSubmit={handleSubmit}
+        className="bg-gray-900 p-8 rounded-2xl w-full max-w-md space-y-5 border border-gray-800">
+
+        <div className="relative">
+          <User className="absolute left-3 top-3 text-gray-400"/>
+          <input
+            placeholder="Full Name"
+            required
+            value={formData.name}
+            onChange={(e)=>setFormData({...formData,name:e.target.value})}
+            className="w-full pl-10 p-3 rounded-lg bg-gray-800 text-white"
+          />
+        </div>
+
+        <div className="relative">
+          <Smartphone className="absolute left-3 top-3 text-gray-400"/>
+          <input
+            placeholder="Phone"
+            required
+            value={formData.phone}
+            onChange={(e)=>setFormData({...formData,phone:e.target.value})}
+            className="w-full pl-10 p-3 rounded-lg bg-gray-800 text-white"
+          />
+        </div>
+
+        <div className="relative">
+          <Mail className="absolute left-3 top-3 text-gray-400"/>
+          <input
+            placeholder="Email"
+            required
+            value={formData.email}
+            onChange={(e)=>setFormData({...formData,email:e.target.value})}
+            className="w-full pl-10 p-3 rounded-lg bg-gray-800 text-white"
+          />
+        </div>
+
+        <input
+          placeholder="Enrollment Number"
+          required
+          value={formData.enrollment}
+          onChange={(e)=>setFormData({...formData,enrollment:e.target.value})}
+          className="w-full p-3 rounded-lg bg-gray-800 text-white"
         />
-      </div>
 
-      <div className="bg-gray-900 rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-[90%] sm:max-w-md border border-gray-800">
-        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8 text-center">
-          Event Registration
-        </h2>
+        <button
+          disabled={loading}
+          className={`w-full py-3 rounded-lg text-white font-semibold transition ${
+            loading ? "bg-gray-600 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
+          }`}
+        >
+          {loading ? "Generating Ticket..." : "Generate Ticket"}
+        </button>
+      </form>
+    )}
 
-        {messages.length > 0 && (
-          <div className="space-y-2 mb-4">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className="bg-gray-800 text-gray-200 text-sm sm:text-base p-2 rounded-md"
-              >
-                {message}
-              </div>
-            ))}
+    {submitted && (
+      <div className="flex flex-col items-center gap-6">
+
+        {loading && (
+          <div className="text-white text-lg animate-pulse">
+            Generating your ticket...
           </div>
         )}
 
-        {!submitted && (
-          <form
-            onSubmit={otpSent ? handleVerifyOtp : handleSubmit}
-            className="space-y-5"
-          >
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Name
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="pl-10 w-full py-2.5 sm:py-3 px-4 rounded-lg bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white placeholder-gray-400"
-                  placeholder="Enter your full name"
-                  required
-                />
-              </div>
-            </div>
+        <canvas
+          ref={canvasRef}
+          className="max-w-full rounded-xl border border-red-500 shadow-2xl"
+        />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                className="w-full py-2.5 sm:py-3 px-4 rounded-lg bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Mobile
-              </label>
-              <div className="relative">
-                <Smartphone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                  className="pl-10 w-full py-2.5 sm:py-3 px-4 rounded-lg bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white placeholder-gray-400"
-                  placeholder="Enter your mobile number"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Affiliation
-              </label>
-              <select
-                name="affiliation"
-                value={formData.affiliation}
-                onChange={(e) =>
-                  setFormData({ ...formData, affiliation: e.target.value })
-                }
-                className="w-full py-2.5 sm:py-3 px-4 rounded-lg bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
-                required
-              >
-                <option value="">Select Affiliation</option>
-                <option value="vnit">VNIT</option>
-                <option value="non_vnit">Non-VNIT</option>
-              </select>
-            </div>
-
-            {otpSent && formData.affiliation === "non_vnit" && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  OTP
-                </label>
-                <input
-                  type="text"
-                  name="otp"
-                  value={formData.otp}
-                  onChange={(e) =>
-                    setFormData({ ...formData, otp: e.target.value })
-                  }
-                  className="w-full py-2.5 sm:py-3 px-4 rounded-lg bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-white"
-                  placeholder="Enter OTP sent to your email"
-                  required
-                />
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className={`w-full py-2.5 sm:py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base ${
-                loading ? "cursor-wait opacity-50" : ""
-              }`}
-              disabled={loading}
-            >
-              {loading ? "Loading..." : otpSent ? "Verify OTP" : "Submit"}
-            </button>
-          </form>
-        )}
-
-        {submitted && (
-          <div className="text-center">
-            <button
-              className="flex items-center justify-center gap-2 py-2.5 sm:py-3 px-4 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm sm:text-base"
-              onClick={handleWhatsAppRedirect}
-            >
-              Message us.
-            </button>
-          </div>
+        {!loading && (
+          <p className="text-white text-lg font-semibold">
+            See you on <span className="text-red-500">15th</span> Feb'26!
+          </p>
         )}
       </div>
-    </div>
+    )}
+
+  </div>
   );
 };
 
